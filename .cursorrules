@@ -1,0 +1,241 @@
+{
+  "rules": [
+    {
+      "name": "Project Context: Worxstance Career Workspace",
+      "description": "Worxstance is an AI-powered job-search and career-success workspace organized around 9 core feature tools: Job Discovery, Networking CRM, Skill Gap Analyzer, AI Resume Tailor, AI Cover Letter Generator, STAR Story Builder, Mock Interview Simulator, Follow-Up Manager, and Offer Negotiator. Before major feature or content work, review the background docs in /background (project-plan.pdf, content-blueprint.pdf, project-style-guide.pdf, folder-structure.pdf, structure-outputs.pdf, ideal-customer-profile.pdf) to stay aligned with strategy, structure, and ICP.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/**/*"
+      ]
+    },
+    {
+      "name": "Reference Docs and Content: Read-Only by Default",
+      "description": "Treat /background and /content as reference-only sources for strategy, structure, and tone. Do NOT modify PDFs or text in these folders unless the user explicitly asks; instead, read them to guide implementation, copy, and UX decisions.",
+      "enforcement": "always",
+      "path_patterns": [
+        "background/**/*",
+        "content/**/*"
+      ]
+    },
+    {
+      "name": "Architecture: Use Feature-Sliced Design",
+      "description": "All application logic, UI, and state must be organized under the corresponding /features/XX_module_name folder (e.g., 01_job_discovery, 02_networking, etc.). Keep components under /components for general, reusable items only.",
+      "enforcement": "strict",
+      "path_patterns": [
+        "src/features/**/*",
+        "src/components/**/*"
+      ]
+    },
+    {
+      "name": "Feature Modules: Worxstance 01–09 Tools",
+      "description": "Each of the 9 Worxstance tools must live in its own feature folder under src/features using the numeric prefix pattern: 01_job_discovery, 02_networking, 03_skill_gap_analyzer, 04_ai_resume_tailor, 05_ai_cover_letter_generator, 06_star_story_builder, 07_mock_interview_simulator, 08_post_interview_follow_up, 09_offer_negotiator. Shared UI belongs in src/components, shared hooks in src/hooks, and shared contexts in src/contexts.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/01_job_discovery/**/*",
+        "src/features/02_networking/**/*",
+        "src/features/03_skill_gap_analyzer/**/*",
+        "src/features/04_ai_resume_tailor/**/*",
+        "src/features/05_ai_cover_letter_generator/**/*",
+        "src/features/06_star_story_builder/**/*",
+        "src/features/07_mock_interview_simulator/**/*",
+        "src/features/08_post_interview_follow_up/**/*",
+        "src/features/09_offer_negotiator/**/*"
+      ]
+    },
+    {
+      "name": "Language: Use TypeScript and Functional Components",
+      "description": "All new React components must be written in TypeScript (.tsx) and use functional components with modern React hooks.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/**/*"
+      ]
+    },
+    {
+      "name": "Styling: Tailwind CSS Exclusive",
+      "description": "Style components exclusively using Tailwind CSS utility classes. Avoid creating separate .css files or using large inline style objects.",
+      "enforcement": "always",
+      "keyword_patterns": [
+        "import './*.css'"
+      ],
+      "path_patterns": [
+        "src/**/*"
+      ]
+    },
+    {
+      "name": "State: Centralized Context Management",
+      "description": "For global state (Master Profile, Auth, Job List, etc.), use the defined context providers in the /contexts directory (e.g., MasterProfileContext.tsx). Avoid redundant local state for shared data.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/contexts/**/*",
+        "src/features/**/*"
+      ]
+    },
+    {
+      "name": "Database Access: Use useFirestore Hook",
+      "description": "All direct interactions with Firebase Firestore (get, set, onSnapshot, etc.) must be abstracted and handled via the useFirestore hook from the /hooks directory to maintain consistency and handle dynamic path construction.",
+      "enforcement": "always",
+      "keyword_patterns": [
+        "getFirestore",
+        "doc(",
+        "collection(",
+        "setDoc(",
+        "addDoc(",
+        "updateDoc("
+      ],
+      "exceptions": [
+        "src/hooks/useFirestore.ts",
+        "src/lib/firebase.ts"
+      ]
+    },
+    {
+      "name": "Firestore: Enforce Dynamic Path Structure",
+      "description": "All Firestore collection and document paths must be dynamically constructed using the __app_id and userId variables, following the pattern: /artifacts/${__app_id}/users/${userId}/... . Do not hardcode user-specific paths.",
+      "enforcement": "always",
+      "keyword_patterns": [
+        "/artifacts/${__app_id}/users/${userId}/"
+      ],
+      "path_patterns": [
+        "src/features/**/*",
+        "src/hooks/useFirestore.ts"
+      ]
+    },
+    {
+      "name": "Auth: Guard Firestore Operations",
+      "description": "Database queries and mutations must be guarded to run only after Firebase authentication is fully ready. Logic should check for the isAuthReady flag provided by the Auth Context.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/**/*",
+        "src/hooks/useFirestore.ts"
+      ],
+      "keyword_patterns": [
+        "if (!isAuthReady)",
+        "isAuthReady &&"
+      ]
+    },
+    {
+      "name": "AI Calls: Use useGemini Hook",
+      "description": "All calls to the Gemini API must be routed through the useGemini hook. This hook must handle API key logic (empty string), exponential backoff, model selection ('gemini-2.5-flash-preview-09-2025'), and responseSchema-based structured output.",
+      "enforcement": "always",
+      "keyword_patterns": [
+        "fetch(",
+        "generativelanguage.googleapis.com",
+        "apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/"
+      ],
+      "exceptions": [
+        "src/hooks/useGemini.ts"
+      ]
+    },
+    {
+      "name": "AI: Enforce Structured JSON Output",
+      "description": "All feature tools that rely on AI analysis (01 through 09) must request structured JSON output using a defined responseSchema in the useGemini call, matching the schemas defined in their feature modules and informed by background/structure-outputs.pdf.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/01_job_discovery/**/*",
+        "src/features/02_networking/**/*",
+        "src/features/03_skill_gap_analyzer/**/*",
+        "src/features/04_ai_resume_tailor/**/*",
+        "src/features/05_ai_cover_letter_generator/**/*",
+        "src/features/06_star_story_builder/**/*",
+        "src/features/07_mock_interview_simulator/**/*",
+        "src/features/08_post_interview_follow_up/**/*",
+        "src/features/09_offer_negotiator/**/*"
+      ],
+      "keyword_patterns": [
+        "responseSchema"
+      ]
+    },
+    {
+      "name": "AI Grounding Enforcement for Web Research",
+      "description": "For Job Discovery (01) and Offer Negotiator (09), ensure the Gemini payload includes the tools: [{\"google_search\": {}}] so that the model is grounded with live web results.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/01_job_discovery/**/*",
+        "src/features/09_offer_negotiator/**/*"
+      ],
+      "keyword_patterns": [
+        "\"google_search\": {}"
+      ]
+    },
+    {
+      "name": "AI Privacy & Safety: Negotiation and Compensation",
+      "description": "When generating content related to offers, compensation, or negotiation, do not present advice as legal, financial, or tax guidance. Avoid logging or persisting sensitive user compensation data unless needed for core functionality, and include clear language that suggestions are educational, not professional advice.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/09_offer_negotiator/**/*",
+        "src/features/01_job_discovery/**/*"
+      ]
+    },
+    {
+      "name": "UX: Structured Outputs Powering UI",
+      "description": "AI outputs that power UI views (reports, scripts, checklists, templates) must be structured according to their feature-specific schemas so they can be reliably rendered, updated, and stored. Use strongly typed interfaces in TypeScript and ensure parsing/validation around responseSchema results.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/**/*"
+      ]
+    },
+    {
+      "name": "Metrics & Telemetry Stack",
+      "description": "Use the defined telemetry stack for tracking: Google Analytics 4 for marketing traffic, Stripe for billing and financial metrics, PostHog for in-app engagement and feature usage, Sentry for error logging, and Firestore counters for enforcing usage limits. Add new tracking via shared helpers (e.g., src/lib/analytics.ts, src/lib/metrics.ts) rather than ad-hoc inline analytics calls.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/**/*"
+      ],
+      "keyword_patterns": [
+        "gtag(",
+        "Stripe(",
+        "from 'posthog'",
+        "Sentry.init(",
+        "Sentry.captureException(",
+        "usageCounter",
+        "incrementCounter"
+      ]
+    },
+    {
+      "name": "Free Tier Limits & Firestore Counters",
+      "description": "Usage limits for free users (for example, resume tailoring runs) must be enforced with shared Firestore counters rather than duplicated checks. Implement and reuse centralized helper functions for reading, incrementing, and validating counters so that feature modules (01–09) do not each roll their own limit logic.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/**/*",
+        "src/lib/**/*"
+      ]
+    },
+    {
+      "name": "Content Style & Voice: Worxstance Brand",
+      "description": "When generating user-facing copy (emails, outreach scripts, career guidance, UI text, landing copy), align tone and message with background/project-style-guide.pdf, background/foundational-content.pdf, and the ICP in background/ideal-customer-profile.pdf. Aim for a confident, empathetic, practical coach voice tailored to serious job seekers.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/**/*",
+        "src/components/**/*"
+      ]
+    },
+    {
+      "name": "Structured Outreach & Email Content",
+      "description": "For outreach and email content (networking CRM, follow-ups, outreach sequences), follow the structures and best practices in content/email-sequence.pdf, content/strategic-outreach.pdf, and content/social-media-posting-series.pdf unless the user specifies otherwise. Keep content actionable and personalized using available user/job data.",
+      "enforcement": "always",
+      "path_patterns": [
+        "src/features/02_networking/**/*",
+        "src/features/08_post_interview_follow_up/**/*"
+      ]
+    },
+    {
+      "name": "Static Assets: Images and Media",
+      "description": "Treat assets/images as a static asset directory. Reference existing assets by path, but do not overwrite or delete image files unless explicitly requested. New assets should follow existing naming conventions and be optimized for web use.",
+      "enforcement": "always",
+      "path_patterns": [
+        "assets/images/**/*"
+      ]
+    },
+    {
+      "name": "Backend & Configuration Structure",
+      "description": "If new backend or serverless logic is introduced, place it under backend/ or functions/ directories rather than embedding backend behavior directly into the front-end. Centralize environment variables, API endpoints, and configuration in a small number of modules (e.g., src/lib/config.ts) instead of scattering them across features.",
+      "enforcement": "always",
+      "path_patterns": [
+        "backend/**/*",
+        "functions/**/*",
+        "src/lib/**/*"
+      ]
+    }
+  ]
+}
+
+
