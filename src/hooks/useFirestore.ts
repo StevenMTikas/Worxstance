@@ -6,7 +6,6 @@ import {
   updateDoc, 
   deleteDoc, 
   query,
-  where,
   getDocs,
   DocumentData,
   WithFieldValue,
