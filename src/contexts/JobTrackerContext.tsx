@@ -1,21 +1,85 @@
-import React, { createContext, useContext, useState } from 'react';
-import type { TrackedJob } from '../lib/types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { JobDetails } from '../lib/types';
+import { useFirestore } from '../hooks/useFirestore';
+import { useAuth } from './AuthContext';
 
 interface JobTrackerContextValue {
-  jobs: TrackedJob[];
-  addJob: (job: TrackedJob) => void;
+  savedJobs: JobDetails[];
+  loading: boolean;
+  saveJob: (job: Omit<JobDetails, 'id' | 'dateAdded' | 'status'>) => Promise<string>;
+  removeJob: (jobId: string) => Promise<void>;
+  updateJobStatus: (jobId: string, status: JobDetails['status']) => Promise<void>;
 }
 
-const JobTrackerContext = createContext<JobTrackerContextValue | undefined>(undefined);
+export const JobTrackerContext = createContext<JobTrackerContextValue | undefined>(undefined);
 
 export const JobTrackerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [jobs, setJobs] = useState<TrackedJob[]>([]);
+  const [savedJobs, setSavedJobs] = useState<JobDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const { isAuthReady, userId } = useAuth();
+  const { subscribeToCollection, addDocument, deleteDocument, updateDocument } = useFirestore();
 
-  const addJob = (job: TrackedJob) => {
-    setJobs((prev) => [...prev, job]);
+  useEffect(() => {
+    if (!isAuthReady || !userId) {
+      setSavedJobs([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    // Subscribe to saved jobs collection
+    // Path: /artifacts/{APP_ID}/users/{userId}/job_discovery_list
+    const unsubscribe = subscribeToCollection('job_discovery_list', (data) => {
+      // Sort by dateAdded descending
+      const sorted = (data as JobDetails[]).sort((a, b) => 
+        new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()
+      );
+      setSavedJobs(sorted);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [isAuthReady, userId, subscribeToCollection]);
+
+  const saveJob = useCallback(async (jobData: Omit<JobDetails, 'id' | 'dateAdded' | 'status'>) => {
+    if (!userId) throw new Error("User not authenticated");
+    
+    // Check if already saved (by URL if available, or title+company combo)
+    const exists = savedJobs.find(j => 
+      (jobData.url && j.url === jobData.url) || 
+      (j.title === jobData.title && j.company === jobData.company)
+    );
+    
+    if (exists) {
+      console.log("Job already saved, skipping duplicate.");
+      return exists.id;
+    }
+
+    const newJob: Omit<JobDetails, 'id'> = {
+      ...jobData,
+      status: 'saved',
+      dateAdded: new Date().toISOString()
+    };
+
+    return await addDocument('job_discovery_list', newJob);
+  }, [userId, addDocument, savedJobs]);
+
+  const removeJob = useCallback(async (jobId: string) => {
+    await deleteDocument('job_discovery_list', jobId);
+  }, [deleteDocument]);
+
+  const updateJobStatus = useCallback(async (jobId: string, status: JobDetails['status']) => {
+    await updateDocument('job_discovery_list', jobId, { status });
+  }, [updateDocument]);
+
+  const value: JobTrackerContextValue = {
+    savedJobs,
+    loading,
+    saveJob,
+    removeJob,
+    updateJobStatus
   };
-
-  const value: JobTrackerContextValue = { jobs, addJob };
 
   return (
     <JobTrackerContext.Provider value={value}>
@@ -31,5 +95,3 @@ export const useJobTracker = (): JobTrackerContextValue => {
   }
   return ctx;
 };
-
-

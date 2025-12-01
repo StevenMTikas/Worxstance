@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getPerformance } from 'firebase/performance';
 import { getAnalytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 
@@ -22,7 +22,13 @@ const app = initializeApp(firebaseConfig);
 
 // Export auth and firestore instances
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Initialize Firestore with settings (ignoreUndefinedProperties to prevent crashes with optional form fields)
+export const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true,
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
+
 export const perf = getPerformance(app);
 export const analyticsPromise =
   typeof window !== 'undefined'
