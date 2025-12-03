@@ -128,7 +128,66 @@ export function useGemini(): UseGeminiReturn {
       if (responseSchema) {
         // Clean up potential markdown code blocks if tools were used (since strict mode was off)
         if (tools && tools.length > 0) {
+          // Remove markdown code blocks
           text = text.replace(/```json\n?|\n?```/g, '').trim();
+          
+          // Extract JSON from text that may have explanatory content before/after
+          // Look for JSON object/array boundaries
+          const jsonStart = text.indexOf('{');
+          const jsonArrayStart = text.indexOf('[');
+          
+          // Find the first JSON structure (object or array)
+          let jsonStartIndex = -1;
+          if (jsonStart !== -1 && jsonArrayStart !== -1) {
+            jsonStartIndex = Math.min(jsonStart, jsonArrayStart);
+          } else if (jsonStart !== -1) {
+            jsonStartIndex = jsonStart;
+          } else if (jsonArrayStart !== -1) {
+            jsonStartIndex = jsonArrayStart;
+          }
+          
+          // If we found a JSON start, extract from there
+          if (jsonStartIndex !== -1) {
+            // Find the matching closing brace/bracket
+            let braceCount = 0;
+            let bracketCount = 0;
+            let inString = false;
+            let escapeNext = false;
+            
+            for (let i = jsonStartIndex; i < text.length; i++) {
+              const char = text[i];
+              
+              if (escapeNext) {
+                escapeNext = false;
+                continue;
+              }
+              
+              if (char === '\\') {
+                escapeNext = true;
+                continue;
+              }
+              
+              if (char === '"' && !escapeNext) {
+                inString = !inString;
+                continue;
+              }
+              
+              if (!inString) {
+                if (char === '{') braceCount++;
+                if (char === '}') braceCount--;
+                if (char === '[') bracketCount++;
+                if (char === ']') bracketCount--;
+                
+                // When all braces and brackets are closed, we have complete JSON
+                if (braceCount === 0 && bracketCount === 0) {
+                  text = text.substring(jsonStartIndex, i + 1);
+                  break;
+                }
+              }
+            }
+          }
+          
+          text = text.trim();
         }
 
         // Parse JSON
@@ -136,7 +195,25 @@ export function useGemini(): UseGeminiReturn {
           return JSON.parse(text) as T;
         } catch (e) {
           console.error('Failed to parse Gemini JSON response:', e);
-          console.log('Raw text received:', text);
+          console.log('Raw text received:', text.substring(0, 500)); // Log first 500 chars
+          
+          // Try one more time with aggressive cleanup
+          try {
+            // Remove everything before first {
+            const firstBrace = text.indexOf('{');
+            if (firstBrace !== -1) {
+              const cleaned = text.substring(firstBrace);
+              // Remove everything after last }
+              const lastBrace = cleaned.lastIndexOf('}');
+              if (lastBrace !== -1) {
+                const finalJson = cleaned.substring(0, lastBrace + 1);
+                return JSON.parse(finalJson) as T;
+              }
+            }
+          } catch (e2) {
+            console.error('Second parse attempt also failed:', e2);
+          }
+          
           throw new Error('Invalid JSON response from AI');
         }
       }

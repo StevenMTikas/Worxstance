@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import LandingPage from './pages/LandingPage';
 import MasterProfile from './pages/MasterProfile';
 import DiscoveryPage from './features/01_job_discovery/DiscoveryPage';
 import ResumeTailorPage from './features/04_ai_resume_tailor/ResumeTailorPage';
@@ -14,7 +15,7 @@ import { JobTrackerProvider } from './contexts/JobTrackerContext';
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { user, isAuthReady } = useAuth();
 
-  // 1. Wait for auth to initialize (check token, anonymous sign-in, etc.)
+  // 1. Wait for auth to initialize
   if (!isAuthReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -23,12 +24,32 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
     );
   }
 
-  // 2. Once ready, if no user, redirect to login (should theoretically not happen with auto-anon, but good safety)
+  // 2. If no user, redirect to login
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   // 3. Authenticated
+  return children;
+};
+
+// Public route that redirects to dashboard if already authenticated
+const PublicRoute = ({ children }: { children: JSX.Element }) => {
+  const { user, isAuthReady } = useAuth();
+
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-slate-500">Loading Worxstance...</div>
+      </div>
+    );
+  }
+
+  // If already logged in (and not anonymous), redirect to dashboard
+  if (user && !user.isAnonymous) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 };
 
@@ -40,11 +61,26 @@ const App: React.FC = () => {
           <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
             <Routes>
               {/* Public Routes */}
-              <Route path="/login" element={<Login />} />
+              <Route 
+                path="/" 
+                element={
+                  <PublicRoute>
+                    <LandingPage />
+                  </PublicRoute>
+                } 
+              />
+              <Route 
+                path="/login" 
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                } 
+              />
               
               {/* Protected Routes */}
               <Route 
-                path="/" 
+                path="/dashboard" 
                 element={
                   <ProtectedRoute>
                     <Dashboard />
@@ -59,7 +95,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } 
               />
-               <Route 
+              <Route 
                 path="/job-discovery" 
                 element={
                   <ProtectedRoute>
@@ -67,7 +103,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } 
               />
-               <Route 
+              <Route 
                 path="/skill-gap-analyzer" 
                 element={
                   <ProtectedRoute>
@@ -75,7 +111,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } 
               />
-               <Route 
+              <Route 
                 path="/resume-tailor" 
                 element={
                   <ProtectedRoute>

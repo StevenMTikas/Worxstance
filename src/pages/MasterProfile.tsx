@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { MasterProfileSchema, type MasterProfileFormData } from '../features/master_profile/schemas';
 import BasicInfoSection from '../features/master_profile/BasicInfoSection';
 import ExperienceSection from '../features/master_profile/ExperienceSection';
+import EducationSection from '../features/master_profile/EducationSection';
+import SkillsSection from '../features/master_profile/SkillsSection';
 import { useAuth } from '../contexts/AuthContext';
 import { useMasterProfile } from '../contexts/MasterProfileContext';
 
@@ -113,12 +115,8 @@ const MasterProfilePage: React.FC = () => {
           <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-8">
             <BasicInfoSection />
             <ExperienceSection />
-            
-            {/* TODO: Add Education, Skills, Certifications Sections */}
-             <div className="p-6 bg-white border border-slate-200 rounded-xl shadow-sm text-center text-slate-500 italic">
-              Education and Skills sections coming soon...
-            </div>
-
+            <EducationSection />
+            <SkillsSection />
           </form>
         </FormProvider>
       </div>

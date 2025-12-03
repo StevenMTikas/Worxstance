@@ -17,6 +17,7 @@ interface AuthContextValue {
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
+  signInAsGuest: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -40,39 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setIsAuthReady(true);
-      } else {
-        // No user is signed in.
-        // Enforce mandatory sign-in: Fallback to anonymous if no token logic is pending
-        // (If we just called signInWithCustomToken, this might fire with null first? 
-        //  Actually onAuthStateChanged usually fires with the result if initiated immediately?
-        //  Safest to just try anon if null, unless we explicitly want to wait.
-        //  But signInAnonymously is idempotent-ish in that it creates a session.)
-        
-        // However, if we are in the middle of a token sign-in, we might race.
-        // But since signInWithCustomToken is async, and we called it *before* setting up the listener?
-        // No, we call it in the same tick.
-        
-        // Let's rely on the fact that if token is present, we try it. 
-        // If it fails, or if it succeeds, onAuthStateChanged fires.
-        
-        // If we are here (user is null), either:
-        // 1. Initial load, no persistence, no token.
-        // 2. Token sign-in failed.
-        // 3. User logged out.
-        
-        // Check if we should auto-anon-login.
-        // If token is present in URL, we assume we tried it.
-        // If it failed (still null), we can fall back to anon.
-        
-        signInAnonymously(auth).catch((err) => {
-            console.error("Anonymous sign-in failed", err);
-            // Even if failed, we mark auth as ready so the app doesn't hang
-            setIsAuthReady(true);
-        });
-      }
+      setUser(currentUser);
+      setIsAuthReady(true);
+      // No longer auto-signing in anonymously - user must explicitly log in
     });
 
     return () => unsubscribe();
@@ -86,11 +57,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await createUserWithEmailAndPassword(auth, email, pass);
   };
 
+  const signInAsGuest = async () => {
+    await signInAnonymously(auth);
+  };
+
   const logout = async () => {
     await signOut(auth);
-    // Note: signOut will trigger onAuthStateChanged(null), 
-    // which will trigger signInAnonymously() again due to our logic above.
-    // This effectively resets the user to a new anonymous identity.
+    // After logout, user will be redirected to login/landing page
   };
 
   const value: AuthContextValue = {
@@ -99,7 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthReady,
     login,
     register,
-    logout
+    logout,
+    signInAsGuest
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
