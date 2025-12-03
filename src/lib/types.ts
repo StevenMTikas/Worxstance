@@ -74,6 +74,7 @@ export interface JobDetails {
   // Analysis data
   matchScore?: number; // 0-100
   keywords?: string[];
+  internalNote?: string;
 }
 
 // Alias for backward compatibility if needed, or prefer JobDetails
@@ -84,24 +85,55 @@ export interface JobList {
 }
 
 // --- Networking CRM ---
-export type ContactStatus = 'new' | 'contacted' | 'replied' | 'meeting_scheduled' | 'ghosted' | 'connected';
+export type PipelineStage = 'new' | 'warm' | 'meeting' | 'closed';
+export type ContactPriority = 'high' | 'medium' | 'low';
+export type OutreachChannel = 'email' | 'linkedin';
 
-export interface ContactData {
+export interface ContactActivity {
   id: string;
-  name: string;
-  role: string;
-  company: string;
-  platform: 'LinkedIn' | 'Email' | 'Twitter' | 'Other';
-  status: ContactStatus;
-  lastActionDate: string; // ISO timestamp
-  notes?: string;
+  type: 'note' | 'email' | 'call' | 'meeting' | 'ai_draft';
+  summary: string;
+  sentiment?: 'positive' | 'neutral' | 'negative';
+  owner?: string;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface NetworkingContact {
+  id: string;
+  fullName: string;
+  role?: string;
+  company?: string;
   email?: string;
   linkedinUrl?: string;
-  outreachHistory?: {
-    date: string;
-    type: string; // 'connection_request', 'message', 'email'
-    content?: string;
-  }[];
+  location?: string;
+  status: PipelineStage;
+  priority: ContactPriority;
+  icpValueScore?: number;
+  mutualContext?: string;
+  tags: string[];
+  activity: ContactActivity[];
+  lastInteractionAt?: string;
+  nextStep?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OutreachSequence {
+  id: string;
+  contactId: string;
+  subject: string;
+  opener: string;
+  body: string[];
+  cta: string;
+  personalizationNotes: string[];
+  channel: OutreachChannel;
+  status: 'draft' | 'scheduled' | 'sent';
+  sendMode: 'single' | 'bulk';
+  templateType: 'intro' | 'warm_bump' | 'referral' | 'thank_you' | 'stay_in_contact';
+  createdAt: string;
+  updatedAt: string;
+  sentAt?: string;
 }
 
 // --- Skill Gap Analyzer ---

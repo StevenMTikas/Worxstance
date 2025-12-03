@@ -19,7 +19,7 @@ export interface JobBoardJob {
   url: string;
   salaryRange?: string;
   postedDate?: string;
-  source: 'adzuna' | 'jooble' | 'google';
+  source: 'adzuna' | 'jooble' | 'google' | 'indeed';
 }
 
 // Adzuna API Response Types
@@ -68,41 +68,44 @@ export async function searchAdzunaJobs(
     return [];
   }
 
-  const country = 'us'; // US market
-  const page = 1;
-  
-  // Build query parameters
-  // Limit to 3 results per source
-  const queryParams = new URLSearchParams({
-    app_id: config.adzunaAppId,
-    app_key: config.adzunaAppKey,
-    what: params.role,
-    where: params.location,
-    results_per_page: '3',
-    sort_by: 'date',
-    content_type: 'job',
-  });
+  // Get Firebase project ID for proxy URL
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 
+                    import.meta.env.VITE_APP_FIREBASE_PROJECT_ID;
 
-  // Add remote filter if needed
-  if (params.isRemote) {
-    queryParams.append('telecommuting', '1');
+  if (!projectId) {
+    console.warn('Firebase Project ID missing, cannot call Adzuna proxy.');
+    return [];
   }
 
+  const proxyUrl = `https://us-central1-${projectId}.cloudfunctions.net/adzunaProxy`;
+
   try {
-    const response = await fetch(
-      `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?${queryParams.toString()}`
-    );
+    const response = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        app_id: config.adzunaAppId,
+        app_key: config.adzunaAppKey,
+        what: params.role,
+        where: params.location,
+        results_per_page: '3',
+        content_type: 'job',
+        isRemote: params.isRemote
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Adzuna API error: ${response.status} ${response.statusText}`, errorText);
-      throw new Error(`Adzuna API error: ${response.status} ${response.statusText}`);
+      console.error(`Adzuna Proxy error: ${response.status} ${response.statusText}`, errorText);
+      throw new Error(`Adzuna Proxy error: ${response.status} ${response.statusText}`);
     }
 
     const data: AdzunaResponse = await response.json();
 
     if (!data.results || data.results.length === 0) {
-      console.log('No results from Adzuna API');
+      console.log('No results from Adzuna API (via Proxy)');
       return [];
     }
 
@@ -117,15 +120,6 @@ export async function searchAdzunaJobs(
       source: 'adzuna',
     }));
   } catch (error: any) {
-    // Check if it's a CORS error
-    if (error.message?.includes('CORS') || error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
-      console.warn(
-        'Adzuna API blocked by CORS policy. Adzuna requires server-side API calls. ' +
-        'To use Adzuna, you need to create a backend proxy endpoint. ' +
-        'Continuing with other job sources (Jooble, Google Search)...'
-      );
-      throw new Error('CORS_BLOCKED');
-    }
     console.error('Adzuna API error:', error);
     throw error;
   }
@@ -204,34 +198,33 @@ export async function searchAllJobBoards(
 ): Promise<JobBoardJob[]> {
   const results: JobBoardJob[] = [];
 
-  // Try Adzuna first (max 3 results)
-  // Note: Adzuna API requires server-side calls due to CORS restrictions
-  // If you want to use Adzuna, create a backend proxy endpoint
+  // Try first job board source (max 3 results)
+  // Note: Some APIs require server-side calls due to CORS restrictions
   try {
     const adzunaJobs = await searchAdzunaJobs(params, config);
     // Already limited to 3 by API call, but ensure limit
     const limitedAdzuna = adzunaJobs.slice(0, 3);
     results.push(...limitedAdzuna);
-    console.log(`Adzuna returned ${limitedAdzuna.length} jobs (max 3 per source)`);
+    console.log(`Found ${limitedAdzuna.length} jobs from first source`);
   } catch (error: any) {
     if (error.message === 'CORS_BLOCKED') {
-      // CORS error - expected for Adzuna from browser
-      console.info('Adzuna API requires server-side calls. Skipping Adzuna, using other sources.');
+      // CORS error - expected for some APIs from browser
+      console.info('First source requires server-side calls. Skipping, using other sources.');
     } else {
-      console.warn('Adzuna search failed, continuing with other sources:', error);
+      console.warn('First source search failed, continuing with other sources:', error);
     }
   }
 
-  // Try Jooble if configured (max 3 results)
+  // Try second job board source if configured (max 3 results)
   if (config.joobleApiKey) {
     try {
       const joobleJobs = await searchJoobleJobs(params, config);
       // Already limited to 3 in searchJoobleJobs, but ensure limit
       const limitedJooble = joobleJobs.slice(0, 3);
       results.push(...limitedJooble);
-      console.log(`Jooble returned ${limitedJooble.length} jobs (max 3 per source)`);
+      console.log(`Found ${limitedJooble.length} jobs from second source`);
     } catch (error) {
-      console.warn('Jooble search failed:', error);
+      console.warn('Second source search failed:', error);
     }
   }
 

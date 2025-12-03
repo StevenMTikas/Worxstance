@@ -10,6 +10,7 @@ import { calculateMatchScore } from './matchScoreCalculator';
 import { analyzeJobUrl } from './urlUtils';
 import { searchAllJobBoards, type JobBoardJob } from './jobBoardAPI';
 import { getJobBoardConfig } from '../../lib/jobBoardConfig';
+import { searchIndeedWithJobSpy } from './jobSpyAPI';
 
 const DiscoveryPage: React.FC = () => {
   const { profile } = useMasterProfile();
@@ -23,7 +24,41 @@ const DiscoveryPage: React.FC = () => {
     const allJobs: RecommendedJob[] = [];
     const jobBoardConfig = getJobBoardConfig();
 
-    // Step 1: Search job board APIs (Adzuna, Jooble) for reliable URLs
+    // Step 0: Try JobSpy Indeed scraping (new)
+    let jobSpyResults: JobBoardJob[] = [];
+    try {
+      jobSpyResults = await searchIndeedWithJobSpy({
+        role: data.role,
+        location: data.location,
+        isRemote: data.isRemote,
+        experienceLevel: data.experienceLevel,
+      });
+      // Limit to 3 results per source
+      const limitedJobSpy = jobSpyResults.slice(0, 3);
+      if (limitedJobSpy.length > 0) {
+        // Convert JobSpy results to RecommendedJob format and enhance with AI
+        try {
+          const enhancedJobSpyJobs = await enhanceJobBoardResultsWithAI(
+            limitedJobSpy,
+            profile,
+            data
+          );
+          allJobs.push(...enhancedJobSpyJobs);
+          console.log(`Found ${enhancedJobSpyJobs.length} jobs from Indeed scraping`);
+        } catch (error) {
+          console.error('Failed to enhance Indeed scraping results with AI:', error);
+          // Fallback: convert without AI enhancement
+          const basicJobs = limitedJobSpy.map(job => convertJobBoardToRecommended(job, data));
+          allJobs.push(...basicJobs);
+          console.log(`Found ${basicJobs.length} jobs from Indeed scraping (without AI enhancement)`);
+        }
+      }
+    } catch (error) {
+      console.warn('Indeed scraping failed, using API fallbacks:', error);
+      // Continue with existing APIs
+    }
+
+    // Step 1: Search job board APIs for reliable URLs
     let jobBoardResults: JobBoardJob[] = [];
     try {
       jobBoardResults = await searchAllJobBoards(
@@ -317,13 +352,16 @@ const DiscoveryPage: React.FC = () => {
     const combinedJobs = [...allJobs, ...googleSearchJobs];
     const deduplicatedJobs = deduplicateRecommendedJobs(combinedJobs);
     
-    // Sort by match score (highest first)
-    deduplicatedJobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+    // Prioritize jobs with valid URLs first, then sort by match score within each group
+    const prioritizedJobs = prioritizeJobsByUrlQuality(deduplicatedJobs);
     
-    // Limit to max 8 results total
-    const finalResults = deduplicatedJobs.slice(0, 8);
+    // Sort each group by match score (highest first) while maintaining URL quality priority
+    const sortedPrioritizedJobs = sortJobsByUrlQualityAndScore(prioritizedJobs);
     
-    console.log(`Total unique jobs: ${finalResults.length} (${allJobs.length} from job boards, ${googleSearchJobs.length} from Google Search, limited to 8 total)`);
+    // Limit to max 10 results total
+    const finalResults = sortedPrioritizedJobs.slice(0, 10);
+    
+    console.log(`Total unique jobs: ${finalResults.length} (${allJobs.length} from job boards, ${googleSearchJobs.length} from Google Search, limited to 10 total)`);
     setResults(finalResults);
   };
 
@@ -509,6 +547,72 @@ Return a JSON array with one object per job in the same order, with this structu
       }
       seen.add(normalizedUrl);
       return true;
+    });
+  };
+
+  /**
+   * Group jobs by URL quality priority so reliable links stay ahead of redirects and unknown URLs.
+   * This helps keep high-quality postings at the top even before score sorting.
+   */
+  const prioritizeJobsByUrlQuality = (jobs: RecommendedJob[]): RecommendedJob[] => {
+    const buckets: Record<number, RecommendedJob[]> = {
+      1: [],
+      2: [],
+      3: [],
+      4: [],
+    };
+
+    jobs.forEach((job) => {
+      const priority = getUrlQualityPriority(job);
+      const bucket = buckets[priority] || buckets[4];
+      bucket.push(job);
+    });
+
+    return [...buckets[1], ...buckets[2], ...buckets[3], ...buckets[4]];
+  };
+
+  /**
+   * Get URL quality priority score (lower = higher priority)
+   */
+  const getUrlQualityPriority = (job: RecommendedJob): number => {
+    if (!job.url) return 4; // Lowest priority
+    
+    if (!job.urlAnalysis) {
+      // Analyze if not already done
+      job.urlAnalysis = analyzeJobUrl(job.url, {
+        title: job.title,
+        company: job.company,
+        location: job.location
+      });
+    }
+    
+    const analysis = job.urlAnalysis;
+    if (analysis.quality === 'good' && !analysis.isProblematic) {
+      return 1; // Highest priority
+    } else if (analysis.quality === 'redirect') {
+      return 2; // Medium-low priority
+    } else {
+      return 3; // Low priority
+    }
+  };
+
+  /**
+   * Sort jobs by URL quality first, then by match score
+   */
+  const sortJobsByUrlQualityAndScore = (jobs: RecommendedJob[]): RecommendedJob[] => {
+    return [...jobs].sort((a, b) => {
+      // First, sort by URL quality priority (lower number = higher priority)
+      const urlPriorityA = getUrlQualityPriority(a);
+      const urlPriorityB = getUrlQualityPriority(b);
+      
+      if (urlPriorityA !== urlPriorityB) {
+        return urlPriorityA - urlPriorityB;
+      }
+      
+      // If URL quality is the same, sort by match score (higher = better)
+      const scoreA = a.matchScore || 0;
+      const scoreB = b.matchScore || 0;
+      return scoreB - scoreA;
     });
   };
 

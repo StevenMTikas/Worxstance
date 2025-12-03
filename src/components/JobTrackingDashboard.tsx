@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Briefcase, MapPin, Trash2, ChevronDown, Plus, X, Loader2, ExternalLink } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Briefcase, MapPin, Trash2, ChevronDown, Plus, X, Loader2, ExternalLink, FileText, Mail } from 'lucide-react';
 import { useJobTracker } from '../contexts/JobTrackerContext';
 import { useGemini } from '../hooks/useGemini';
 import { useMasterProfile } from '../contexts/MasterProfileContext';
@@ -83,13 +83,28 @@ const JobTrackingDashboard: React.FC = () => {
   const { savedJobs, loading, removeJob, updateJobStatus, saveJob } = useJobTracker();
   const { callModel } = useGemini();
   const { profile } = useMasterProfile();
+  const navigate = useNavigate();
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addingJob, setAddingJob] = useState(false);
   const [addJobError, setAddJobError] = useState<string | null>(null);
   const [jobTitle, setJobTitle] = useState('');
+  const [jobCompany, setJobCompany] = useState('');
   const [jobUrl, setJobUrl] = useState('');
+  const [jobSalary, setJobSalary] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [internalNote, setInternalNote] = useState('');
+
+  const resetAddJobForm = () => {
+    setJobTitle('');
+    setJobCompany('');
+    setJobUrl('');
+    setJobSalary('');
+    setJobDescription('');
+    setInternalNote('');
+    setAddJobError(null);
+  };
 
   // Show only the most recent 8 jobs
   const displayJobs = savedJobs.slice(0, 8);
@@ -137,14 +152,23 @@ const JobTrackingDashboard: React.FC = () => {
 
   const handleAddJob = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jobTitle.trim() || !jobUrl.trim()) {
+    const trimmedTitle = jobTitle.trim();
+    const trimmedUrl = jobUrl.trim();
+    const trimmedDescription = jobDescription.trim();
+
+    if (!trimmedTitle || !trimmedUrl) {
       setAddJobError('Please provide both job title and URL');
+      return;
+    }
+
+    if (!trimmedDescription) {
+      setAddJobError('Please provide the full job description so we can tailor assets later.');
       return;
     }
 
     // Validate URL format
     try {
-      new URL(jobUrl);
+      new URL(trimmedUrl);
     } catch {
       setAddJobError('Please enter a valid URL (must start with http:// or https://)');
       return;
@@ -153,34 +177,49 @@ const JobTrackingDashboard: React.FC = () => {
     setAddingJob(true);
     setAddJobError(null);
 
+    let extractedJob: Awaited<ReturnType<typeof extractJobDetailsFromUrl>> | null = null;
+
     try {
       // Extract job details from URL using AI
-      const extractedJob = await extractJobDetailsFromUrl({
-        url: jobUrl,
+      extractedJob = await extractJobDetailsFromUrl({
+        url: trimmedUrl,
         userProvidedTitle: jobTitle,
         callModel,
         profile
       });
+    } catch (error) {
+      console.warn('Unable to auto-extract job details, falling back to manual entry.', error);
+    }
+
+    try {
+      const finalCompany =
+        jobCompany.trim() ||
+        extractedJob?.company ||
+        'Company not specified';
+
+      const finalSalary = jobSalary.trim() || extractedJob?.salaryRange;
+      const manualDescription = trimmedDescription || extractedJob?.description || 'Description not provided';
+      const noteValue = internalNote.trim() || undefined;
 
       // Save the job
       await saveJob({
-        title: extractedJob.title,
-        company: extractedJob.company,
-        location: extractedJob.location,
-        salaryRange: extractedJob.salaryRange,
-        description: extractedJob.description,
-        url: extractedJob.url,
-        matchScore: extractedJob.matchScore,
-        keywords: []
+        title: trimmedTitle,
+        company: finalCompany,
+        location: extractedJob?.location,
+        salaryRange: finalSalary || undefined,
+        description: manualDescription,
+        url: trimmedUrl,
+        matchScore: extractedJob?.matchScore,
+        keywords: [],
+        internalNote: noteValue
       });
 
       // Reset form and close modal
-      setJobTitle('');
-      setJobUrl('');
+      resetAddJobForm();
       setShowAddModal(false);
     } catch (error: any) {
       console.error('Failed to add job:', error);
-      setAddJobError(error.message || 'Failed to extract job details. Please check the URL and try again.');
+      setAddJobError(error.message || 'Failed to save job. Please try again.');
     } finally {
       setAddingJob(false);
     }
@@ -216,9 +255,7 @@ const JobTrackingDashboard: React.FC = () => {
               <button
                 onClick={() => {
                   setShowAddModal(false);
-                  setJobTitle('');
-                  setJobUrl('');
-                  setAddJobError(null);
+                  resetAddJobForm();
                 }}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
                 disabled={addingJob}
@@ -245,6 +282,21 @@ const JobTrackingDashboard: React.FC = () => {
               </div>
 
               <div>
+                <label htmlFor="job-company" className="block text-sm font-medium text-slate-700 mb-1">
+                  Company (optional)
+                </label>
+                <input
+                  id="job-company"
+                  type="text"
+                  value={jobCompany}
+                  onChange={(e) => setJobCompany(e.target.value)}
+                  disabled={addingJob}
+                  className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  placeholder="e.g. Acme Corp"
+                />
+              </div>
+
+              <div>
                 <label htmlFor="job-url" className="block text-sm font-medium text-slate-700 mb-1">
                   Job Posting URL *
                 </label>
@@ -259,8 +311,57 @@ const JobTrackingDashboard: React.FC = () => {
                   placeholder="https://linkedin.com/jobs/view/..."
                 />
                 <p className="mt-1 text-xs text-slate-500">
-                  We'll extract company, location, salary, and description from this URL
+                  Optional enrichment: we'll attempt to pull location, salary, and other context from the posting if reachable.
                 </p>
+              </div>
+
+              <div>
+                <label htmlFor="job-salary" className="block text-sm font-medium text-slate-700 mb-1">
+                  Salary / Compensation (optional)
+                </label>
+                <input
+                  id="job-salary"
+                  type="text"
+                  value={jobSalary}
+                  onChange={(e) => setJobSalary(e.target.value)}
+                  disabled={addingJob}
+                  className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  placeholder="$140K base + bonus"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="job-description" className="block text-sm font-medium text-slate-700 mb-1">
+                  Full Job Description *
+                </label>
+                <textarea
+                  id="job-description"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  required
+                  disabled={addingJob}
+                  rows={5}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  placeholder="Paste the responsibilities, requirements, and any other details you want to track."
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  This text powers resume tailoring, cover letters, and Skill Gap analysis.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="internal-note" className="block text-sm font-medium text-slate-700 mb-1">
+                  Internal Note (optional)
+                </label>
+                <textarea
+                  id="internal-note"
+                  value={internalNote}
+                  onChange={(e) => setInternalNote(e.target.value)}
+                  disabled={addingJob}
+                  rows={3}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  placeholder="e.g. Followed up with recruiter on 11/20, referral from Alex."
+                />
               </div>
 
               {addJobError && (
@@ -274,9 +375,7 @@ const JobTrackingDashboard: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
-                    setJobTitle('');
-                    setJobUrl('');
-                    setAddJobError(null);
+                    resetAddJobForm();
                   }}
                   disabled={addingJob}
                   className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -285,7 +384,12 @@ const JobTrackingDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={addingJob || !jobTitle.trim() || !jobUrl.trim()}
+                  disabled={
+                    addingJob ||
+                    !jobTitle.trim() ||
+                    !jobUrl.trim() ||
+                    !jobDescription.trim()
+                  }
                   className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {addingJob ? (
@@ -406,6 +510,34 @@ const JobTrackingDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => navigate('/resume-tailor', { 
+                              state: { 
+                                jobTitle: job.title,
+                                jobCompany: job.company,
+                                jobDescription: job.description,
+                                jobUrl: job.url
+                              } 
+                            })}
+                            className="inline-flex items-center px-2 py-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Build custom resume for this job"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => navigate('/cover-letter', { 
+                              state: { 
+                                jobTitle: job.title,
+                                jobCompany: job.company,
+                                jobDescription: job.description,
+                                jobUrl: job.url
+                              } 
+                            })}
+                            className="inline-flex items-center px-2 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Build cover letter for this job"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
                           {job.url && (
                             <button
                               onClick={() => window.open(job.url, '_blank', 'noopener,noreferrer')}
