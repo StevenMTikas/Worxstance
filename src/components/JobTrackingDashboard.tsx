@@ -112,14 +112,26 @@ const JobTrackingDashboard: React.FC = () => {
 
   const handleStatusChange = async (jobId: string, newDisplayStatus: DisplayStatus) => {
     setUpdatingJobId(jobId);
+    
+    // Safety timeout - clear loading state after 10 seconds
+    const timeoutId = setTimeout(() => {
+      console.warn('Status update taking longer than expected, clearing loading state');
+      setUpdatingJobId(null);
+    }, 10000);
+    
     try {
       const newStatus = mapDisplayStatusToJobStatus(newDisplayStatus);
+      console.log('Changing job status:', jobId, 'from current to', newStatus);
       await updateJobStatus(jobId, newStatus);
+      console.log('Job status updated successfully');
+      clearTimeout(timeoutId); // Clear timeout on success
     } catch (error) {
       console.error('Failed to update job status:', error);
       alert('Failed to update job status. Please try again.');
+      clearTimeout(timeoutId); // Clear timeout on error
     } finally {
       setUpdatingJobId(null);
+      clearTimeout(timeoutId); // Ensure timeout is cleared
     }
   };
 

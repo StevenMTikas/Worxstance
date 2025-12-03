@@ -6,6 +6,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   publicDir: 'public',
+  server: {
+    open: 'chrome', // Auto-open in Google Chrome
+    strictPort: false, // Allow port to be changed if in use
+  },
   test: {
     globals: true,
     environment: 'jsdom',

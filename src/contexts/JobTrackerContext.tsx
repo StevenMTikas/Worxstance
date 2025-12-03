@@ -70,7 +70,16 @@ export const JobTrackerProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [deleteDocument]);
 
   const updateJobStatus = useCallback(async (jobId: string, status: JobDetails['status']) => {
-    await updateDocument('job_discovery_list', jobId, { status });
+    console.log('Updating job status:', jobId, status);
+    try {
+      const result = await updateDocument('job_discovery_list', jobId, { status });
+      console.log('Update document result:', result);
+      // Explicitly return to ensure promise resolves
+      return Promise.resolve(result);
+    } catch (error) {
+      console.error('Update document error:', error);
+      throw error; // Re-throw to be caught by the component
+    }
   }, [updateDocument]);
 
   const value: JobTrackerContextValue = {

@@ -7,6 +7,7 @@ import { MasterProfileSchema, type MasterProfileFormData } from '../features/mas
 import BasicInfoSection from '../features/master_profile/BasicInfoSection';
 import ExperienceSection from '../features/master_profile/ExperienceSection';
 import EducationSection from '../features/master_profile/EducationSection';
+import CertificationsSection from '../features/master_profile/CertificationsSection';
 import SkillsSection from '../features/master_profile/SkillsSection';
 import { useAuth } from '../contexts/AuthContext';
 import { useMasterProfile } from '../contexts/MasterProfileContext';
@@ -50,6 +51,14 @@ const MasterProfilePage: React.FC = () => {
 
   const onSubmit = async (data: MasterProfileFormData) => {
     setSaveStatus('saving');
+    
+    // Safety timeout - clear loading state after 10 seconds
+    const timeoutId = setTimeout(() => {
+      console.warn('Save operation taking longer than expected');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 5000);
+    }, 10000);
+    
     try {
       const updatedProfile = {
         ...data,
@@ -57,9 +66,11 @@ const MasterProfilePage: React.FC = () => {
         lastUpdated: new Date().toISOString()
       };
       
-      console.log('Saving profile:', updatedProfile); // Debug log
+      console.log('Saving profile:', updatedProfile);
       await updateProfile(updatedProfile);
-      console.log('Profile saved successfully'); // Debug log
+      console.log('Profile saved successfully');
+      
+      clearTimeout(timeoutId);
       setSaveStatus('success');
       
       // Reset success message after 3 seconds
@@ -67,7 +78,10 @@ const MasterProfilePage: React.FC = () => {
       
     } catch (error) {
       console.error("Error saving profile:", error);
+      clearTimeout(timeoutId);
       setSaveStatus('error');
+      // Reset error state after 5 seconds
+      setTimeout(() => setSaveStatus('idle'), 5000);
     }
   };
 
@@ -116,6 +130,7 @@ const MasterProfilePage: React.FC = () => {
             <BasicInfoSection />
             <ExperienceSection />
             <EducationSection />
+            <CertificationsSection />
             <SkillsSection />
           </form>
         </FormProvider>

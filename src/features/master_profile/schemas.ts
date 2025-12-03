@@ -20,6 +20,15 @@ export const EducationSchema = z.object({
   description: z.string().optional(),
 });
 
+export const CertificationSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Certification name is required"),
+  issuer: z.string().min(1, "Issuer is required"),
+  date: z.string().min(1, "Date is required"),
+  expiryDate: z.string().optional(),
+  url: z.string().url().optional().or(z.literal('')),
+});
+
 export const MasterProfileSchema = z.object({
   id: z.string(),
   fullName: z.string().min(1, "Full name is required"),
@@ -36,7 +45,7 @@ export const MasterProfileSchema = z.object({
   skills: z.array(z.string()).default([]),
   experience: z.array(ExperienceSchema).default([]),
   education: z.array(EducationSchema).default([]),
-  certifications: z.array(z.any()).default([]), // TODO: Define Cert Schema if needed
+  certifications: z.array(CertificationSchema).default([]),
   lastUpdated: z.string(),
 });
 
