@@ -166,7 +166,7 @@ function estimateUserExperienceLevel(profile: MasterProfile): 'junior' | 'mid' |
 function calculateLocationMatch(
   jobLocation: string,
   userLocation: string | undefined,
-  isRemote: boolean,
+  _isRemote: boolean,
   userPrefersRemote: boolean
 ): number {
   const lowerJobLoc = jobLocation.toLowerCase();

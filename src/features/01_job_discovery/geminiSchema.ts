@@ -53,6 +53,7 @@ export interface RecommendedJob {
     experienceMatch: number;
     roleRelevance: number;
     locationMatch: number;
+    overallScore: number;
     matchedRequiredSkills: string[];
     matchedPreferredSkills: string[];
     missingRequiredSkills: string[];

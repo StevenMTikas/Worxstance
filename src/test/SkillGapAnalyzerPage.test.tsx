@@ -36,7 +36,11 @@ vi.spyOn(useFirestoreHook, 'useFirestore').mockImplementation(() => ({
   updateDocument: vi.fn(),
   deleteDocument: vi.fn(),
   subscribeToCollection: vi.fn(),
-  getCollection: vi.fn()
+  getCollection: vi.fn(),
+  getDocument: vi.fn(),
+  queryCollection: vi.fn(),
+  isAuthReady: true,
+  userId: 'test-uid'
 }));
 
 const mockProfile = {

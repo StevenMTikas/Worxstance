@@ -15,7 +15,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch, isLoading }) => {
     handleSubmit, 
     formState: { errors } 
   } = useForm<JobDiscoverySearchData>({
-    resolver: zodResolver(JobDiscoverySearchSchema),
+    resolver: zodResolver(JobDiscoverySearchSchema) as any,
     defaultValues: {
       isRemote: false,
       experienceLevel: 'mid'

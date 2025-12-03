@@ -17,7 +17,7 @@ const MasterProfilePage: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   
   const methods = useForm<MasterProfileFormData>({
-    resolver: zodResolver(MasterProfileSchema),
+    resolver: zodResolver(MasterProfileSchema) as any,
     defaultValues: {
       id: user?.uid || '',
       fullName: '',

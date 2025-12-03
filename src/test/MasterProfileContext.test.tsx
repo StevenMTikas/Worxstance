@@ -2,7 +2,6 @@ import { render, waitFor, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MasterProfileProvider, useMasterProfile } from '../contexts/MasterProfileContext';
 import { AuthContext } from '../contexts/AuthContext';
-import * as FirestoreHook from '../hooks/useFirestore';
 import { useEffect } from 'react';
 
 // Mock useFirestore
@@ -39,7 +38,8 @@ const renderProvider = (authReady = true) => {
       isAuthReady: authReady, 
       login: vi.fn(), 
       register: vi.fn(), 
-      logout: vi.fn() 
+      logout: vi.fn(),
+      signInAsGuest: vi.fn()
     }}>
       <MasterProfileProvider>
         <TestComponent />
@@ -52,7 +52,7 @@ describe('MasterProfileContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default subscription behavior: immediate callback with null
-    mockSubscribeToDocument.mockImplementation((col, docId, cb) => {
+    mockSubscribeToDocument.mockImplementation((_col, _docId, cb) => {
       cb(null);
       return () => {};
     });
@@ -69,7 +69,7 @@ describe('MasterProfileContext', () => {
   });
 
   it('updates profile via firestore', async () => {
-    mockSubscribeToDocument.mockImplementation((col, docId, cb) => {
+    mockSubscribeToDocument.mockImplementation((_col, _docId, cb) => {
       cb({ id: 'test', fullName: 'Old Name' });
       return () => {};
     });

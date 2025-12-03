@@ -70,8 +70,6 @@ export function useGemini(): UseGeminiReturn {
         modelConfig.tools = tools;
       }
 
-      const model: GenerativeModel = genAI.getGenerativeModel(modelConfig);
-
       const generationConfig: GenerationConfig = {
         temperature,
       };

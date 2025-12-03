@@ -34,7 +34,8 @@ const renderWithProviders = (ui: React.ReactNode, profileValue = null) => {
         isAuthReady: true, 
         login: vi.fn(), 
         register: vi.fn(), 
-        logout: vi.fn() 
+        logout: vi.fn(),
+        signInAsGuest: vi.fn()
       }}>
         <MasterProfileContext.Provider value={{ 
           profile: profileValue, 

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { MasterProfileFormData } from './schemas';
 
 const ExperienceSection: React.FC = () => {

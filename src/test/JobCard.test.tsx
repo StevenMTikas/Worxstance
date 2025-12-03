@@ -15,7 +15,7 @@ const mockJob = {
   url: 'http://example.com'
 } as any;
 
-const renderCard = (savedJobs = []) => {
+const renderCard = (savedJobs: any[] = []) => {
   return render(
     <JobTrackerContext.Provider value={{
       savedJobs,
@@ -23,7 +23,7 @@ const renderCard = (savedJobs = []) => {
       saveJob: mockSaveJob,
       removeJob: vi.fn(),
       updateJobStatus: vi.fn()
-    }}>
+    } as any}>
       <JobCard job={mockJob} />
     </JobTrackerContext.Provider>
   );

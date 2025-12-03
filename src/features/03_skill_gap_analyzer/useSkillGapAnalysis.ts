@@ -4,7 +4,7 @@ import { SkillGapAnalysisSchema, type SkillGapAnalysisOutput } from './schemas';
 import type { MasterProfile } from '../../lib/types';
 
 export const useSkillGapAnalysis = () => {
-  const { generate, loading, error } = useGemini();
+  const { callModel, loading, error } = useGemini();
   const [analysisResult, setAnalysisResult] = useState<SkillGapAnalysisOutput | null>(null);
 
   const analyzeGap = async (jobDescription: string, profile: MasterProfile, targetRole?: string) => {
@@ -41,7 +41,10 @@ export const useSkillGapAnalysis = () => {
       Output must strictly follow the JSON schema provided.
     `;
 
-    const result = await generate(prompt, SkillGapAnalysisSchema);
+    const result = await callModel<SkillGapAnalysisOutput>({
+      prompt,
+      responseSchema: SkillGapAnalysisSchema
+    });
     
     if (result) {
       setAnalysisResult(result);

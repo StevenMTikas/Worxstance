@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Building2, ExternalLink, ThumbsUp, Check, ChevronDown, ChevronUp, Search, BookmarkPlus } from 'lucide-react';
+import { MapPin, Building2, ExternalLink, Check, ChevronUp, Search, BookmarkPlus } from 'lucide-react';
 import type { RecommendedJob } from './geminiSchema';
 import { useJobTracker } from '../../contexts/JobTrackerContext';
 import { analyzeJobUrl, createJobSearchUrl } from './urlUtils';

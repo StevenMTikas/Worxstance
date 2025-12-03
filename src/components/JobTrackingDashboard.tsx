@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, MapPin, CheckCircle2, Clock, XCircle, FileText, Send, Trash2, ChevronDown, Plus, X, Loader2, ExternalLink } from 'lucide-react';
+import { Briefcase, MapPin, Trash2, ChevronDown, Plus, X, Loader2, ExternalLink } from 'lucide-react';
 import { useJobTracker } from '../contexts/JobTrackerContext';
 import { useGemini } from '../hooks/useGemini';
 import { useMasterProfile } from '../contexts/MasterProfileContext';
@@ -61,40 +61,6 @@ const getStatusColor = (status: DisplayStatus): string => {
       return 'bg-red-100 text-red-700 border-red-300';
     default:
       return 'bg-slate-100 text-slate-700 border-slate-300';
-  }
-};
-
-const getStatusIcon = (status: DisplayStatus) => {
-  switch (status) {
-    case 'open':
-      return <FileText className="w-4 h-4" />;
-    case 'applied':
-      return <Send className="w-4 h-4" />;
-    case 'interview':
-      return <Clock className="w-4 h-4" />;
-    case 'offer':
-      return <CheckCircle2 className="w-4 h-4" />;
-    case 'reject':
-      return <XCircle className="w-4 h-4" />;
-    default:
-      return <FileText className="w-4 h-4" />;
-  }
-};
-
-const getStatusLabel = (status: DisplayStatus): string => {
-  switch (status) {
-    case 'open':
-      return 'Open';
-    case 'applied':
-      return 'Applied';
-    case 'interview':
-      return 'Interview';
-    case 'offer':
-      return 'Offer';
-    case 'reject':
-      return 'Rejected';
-    default:
-      return status;
   }
 };
 

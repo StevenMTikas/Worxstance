@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, AlertTriangle, ArrowRight, Copy, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Copy, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { ResumeTailorResponse } from './geminiSchema';
 import type { MasterProfile } from '../../lib/types';
 import { generateMarkdown } from '../../lib/exportUtils';
