@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ResumeTailorInput from './ResumeTailorInput';
 import ResumeTailorOutput from './ResumeTailorOutput';
 import type { ResumeTailorInputData } from './schemas';
@@ -7,9 +7,18 @@ import { useGemini } from '../../hooks/useGemini';
 import { ResumeTailorResponseSchema, type ResumeTailorResponse } from './geminiSchema';
 import { useMasterProfile } from '../../contexts/MasterProfileContext';
 
+interface LocationState {
+  jobTitle?: string;
+  jobCompany?: string;
+  jobDescription?: string;
+  jobUrl?: string;
+}
+
 const ResumeTailorPage: React.FC = () => {
   const { profile } = useMasterProfile();
   const { callModel, loading: aiLoading, error: aiError } = useGemini();
+  const location = useLocation();
+  const jobData = location.state as LocationState | null;
   const [result, setResult] = useState<ResumeTailorResponse | null>(null);
 
   const handleAnalyze = async (data: ResumeTailorInputData) => {
@@ -81,7 +90,9 @@ const ResumeTailorPage: React.FC = () => {
         {!result ? (
           <ResumeTailorInput 
             onAnalyze={handleAnalyze} 
-            isAnalyzing={aiLoading} 
+            isAnalyzing={aiLoading}
+            initialJobTitle={jobData?.jobTitle}
+            initialJobDescription={jobData?.jobDescription}
           />
         ) : (
           <ResumeTailorOutput 

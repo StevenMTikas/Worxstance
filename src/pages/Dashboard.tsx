@@ -26,6 +26,14 @@ const Dashboard: React.FC = () => {
       color: 'bg-indigo-50 border-indigo-200 text-indigo-700'
     },
     {
+      id: '02_networking',
+      name: 'Networking CRM',
+      description: 'Strategic outreach pipeline with AI drafting and bulk send limits.',
+      path: '/networking',
+      status: 'Beta',
+      color: 'bg-emerald-50 border-emerald-200 text-emerald-700'
+    },
+    {
       id: '04_ai_resume_tailor',
       name: 'AI Resume Tailor',
       description: 'Tailor your resume to specific job descriptions for higher match rates.',
@@ -44,7 +52,6 @@ const Dashboard: React.FC = () => {
   ];
 
   const comingSoon = [
-    { name: 'Networking CRM', path: '/networking' },
     { name: 'Skill Gap Analyzer', path: '/skill-gap' },
     { name: 'Cover Letter Generator', path: '/cover-letter' },
     { name: 'STAR Story Builder', path: '/star-stories' },

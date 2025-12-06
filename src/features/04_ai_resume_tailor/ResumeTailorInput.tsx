@@ -8,9 +8,16 @@ import { useMasterProfile } from '../../contexts/MasterProfileContext';
 interface ResumeTailorInputProps {
   onAnalyze: (data: ResumeTailorInputData) => void;
   isAnalyzing: boolean;
+  initialJobTitle?: string;
+  initialJobDescription?: string;
 }
 
-const ResumeTailorInput: React.FC<ResumeTailorInputProps> = ({ onAnalyze, isAnalyzing }) => {
+const ResumeTailorInput: React.FC<ResumeTailorInputProps> = ({ 
+  onAnalyze, 
+  isAnalyzing,
+  initialJobTitle,
+  initialJobDescription
+}) => {
   const { profile } = useMasterProfile();
   
   const { 
@@ -19,7 +26,11 @@ const ResumeTailorInput: React.FC<ResumeTailorInputProps> = ({ onAnalyze, isAnal
     formState: { errors, isValid } 
   } = useForm<ResumeTailorInputData>({
     resolver: zodResolver(ResumeTailorInputSchema),
-    mode: 'onChange'
+    mode: 'onChange',
+    defaultValues: {
+      targetRole: initialJobTitle || '',
+      jobDescription: initialJobDescription || ''
+    }
   });
 
   const onSubmit: SubmitHandler<ResumeTailorInputData> = (data) => {
